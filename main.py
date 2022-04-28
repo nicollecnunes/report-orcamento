@@ -14,13 +14,21 @@ dirAtual = os.path.dirname(__file__)
 canvas = canvas.Canvas(dirAtual + "\\RelatorioOrcamento.pdf", pagesize = A4)
 linhaAtual = 690
 class Produto:
-    def __init__(self, url, titulo, avaliacao, preco, vendas, informacoes, estoque): 
+    def __init__(self, url, titulo, avaliacao, preco, vendas, informacoes): 
         self.url = url
         self.titulo = titulo 
         self.avaliacao = avaliacao
         self.preco = preco 
         self.vendas = vendas
         self.informacoes = informacoes
+
+def getLinhaAtual():
+    global linhaAtual
+    return linhaAtual
+
+def subtraiLinhaAtual(valor):
+    global linhaAtual
+    linhaAtual = linhaAtual - valor
 
 def configurarAmbiente():
     print(">> Configurando ambiente do browser...")
@@ -38,33 +46,36 @@ def cabecalhoPDF(nomeProduto, autor):
     canvas.drawCentredString(300, 770, "Orçamento - " + nomeProduto)
     canvas.setFont("Helvetica", 15)
     canvas.drawCentredString(300, 740, "Por: " + autor + " | Gerado em: " + date.today().strftime("%B %d, %Y"))
-    canvas.line(30, 720, 550, 720)
+    canvas.line(30, 720, 570, 720)
 
-def escreveQuebraLinha(texto, coordx):
-    global linhaAtual
-    if len(texto) > 45:
-        textoQuebrado = textwrap.wrap(texto, width=45)
-        canvas.drawString(coordx, linhaAtual, textoQuebrado[0])
-        canvas.drawString(coordx, linhaAtual, textoQuebrado[1])
-        linhaAtual - 40
+def escreveQuebraLinha(coordx, texto):
+    if len(texto) > 58:
+        textoQuebrado = textwrap.wrap(texto, width=58)
+        canvas.drawString(coordx, getLinhaAtual(), textoQuebrado[0])
+        subtraiLinhaAtual(20)
+        canvas.drawString(coordx, getLinhaAtual(), textoQuebrado[1])
+        subtraiLinhaAtual(20)
     else:
-        canvas.drawString(coordx, linhaAtual, texto)
-        linhaAtual - 20
+        canvas.drawString(coordx, getLinhaAtual(), texto)
+        subtraiLinhaAtual(20)
 
 def adicionarProduto(produto, index):
-    global linhaAtual
     print(">> Adicionando ao arquivo o produto " + str(index + 1) + "...")
+
     canvas.setFont("Helvetica-Bold", 18)
-    canvas.drawString(40, linhaAtual, str(index + 1) + ". " + produto.titulo)
-    linhaAtual = linhaAtual - 25
+    escreveQuebraLinha(40, str(index + 1) + ". " + produto.titulo)
+    subtraiLinhaAtual(5)
 
     canvas.setFont("Helvetica", 12)
-    canvas.drawString(50, linhaAtual, "Avalicação: " + produto.avaliacao + " | Preço: " + produto.preco + " | Vendas: " + produto.vendas)
-    linhaAtual = linhaAtual - 20
-    canvas.drawString(50, linhaAtual, "Link: " + produto.url)
-    linhaAtual = linhaAtual - 20
-    canvas.drawString(50, linhaAtual, produto.informacoes)
-    linhaAtual = linhaAtual - 40
+    escreveQuebraLinha(50, "Avalicação: " + produto.avaliacao + " | Preço: " + produto.preco + " | Vendas: " + produto.vendas)
+
+    canvas.setFont("Helvetica", 10)
+    canvas.drawString(50, getLinhaAtual(), "Link: " + produto.url)
+    subtraiLinhaAtual(20)
+    
+    canvas.setFont("Helvetica", 12)
+    escreveQuebraLinha(50, produto.informacoes)
+    subtraiLinhaAtual(20)
 
 def tratarInfoGeral(i):
     i = re.sub('([A-Z])', r' \1', i)
@@ -94,20 +105,27 @@ def pegarInformacoes(url, index):
         informacoes = ""
         print("  >> Erro ao buscar informações secundárias")
 
-    listaProdutos.append( Produto(url, titulo, avaliacao[0], preco[0], vendas[0], informacoes) )
+    try:
+        listaProdutos.append( Produto(url, titulo, avaliacao[0], preco[0], vendas[0], informacoes) )
+    except: 
     navegador.quit()
 
 autor = input("Digite o seu nome: ")
 nomeProduto = input("Digite o nome do produto: ")
 listaLinks = input("Digite a lista de links: ")
 
-if type(listaLinks) is str:
+if len(listaLinks.split(" ")) == 1:
     listaLinks = [listaLinks]
+else:
+    listaLinks = listaLinks.split(" ")
+
+
+print(listaLinks)
 
 for i in range(len(listaLinks)):
     pegarInformacoes(listaLinks[i], i)
 
-cabecalhoPDF(autor, nomeProduto)
+cabecalhoPDF(nomeProduto, autor)
 
 for i in range(len(listaProdutos)):
     adicionarProduto(listaProdutos[i], i)
